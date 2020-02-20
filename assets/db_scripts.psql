@@ -1,0 +1,107 @@
+-- scripts to create the database tables
+
+-- create the table
+CREATE DATABASE locallilbrary;
+
+
+-- language table
+CREATE TABLE language(
+    language_code varchar PRIMARY KEY ,
+    name varchar NOT NULL
+
+);
+
+-- install uuid extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- person table
+CREATE TABLE person(
+user_id uuid DEFAULT uuid_generate_v4() PRIMARY KEY ,
+first_name varchar NOT NULL,
+last_name varchar NOT NULL ,
+email varchar NOT NULL UNIQUE,
+password varchar NOT NULL ,
+phone varchar NOT NULL,
+is_admin bool DEFAULT FALSE
+);
+
+--author table
+CREATE TABLE author(
+    author_id uuid DEFAULT uuid_generate_v4() PRIMARY KEY ,
+    first_name varchar NOT NULL,
+    last_name varchar NOT NULL ,
+    date_of_birth date NOT NULL ,
+    date_of_death date,
+    bio text NOT NULL ,
+    country_of_origin varchar NOT NULL
+);
+
+-- book table
+
+CREATE TABLE book(
+    book_id uuid DEFAULT uuid_generate_v4()PRIMARY KEY ,
+    title varchar NOT NULL UNIQUE ,
+    summary text NOT NULL ,
+    imprint varchar,
+    isbn varchar UNIQUE ,
+    language varchar NOT NULL ,
+    FOREIGN KEY (language) REFERENCES language(language_code)
+);
+
+-- genre table
+CREATE TABLE genre(
+    genre_id uuid DEFAULT uuid_generate_v4() PRIMARY KEY ,
+    name varchar UNIQUE NOT NULL
+);
+
+-- bookgenre table
+CREATE TABLE bookgenre(
+    book uuid NOT NULL ,
+    genre uuid NOT NULL ,
+    FOREIGN KEY (book) REFERENCES book(book_id),
+    FOREIGN KEY (genre) REFERENCES  genre(genre_id),
+PRIMARY KEY (book,genre)
+);
+
+-- create an ENUM type for the book status
+CREATE TYPE bookstatus as ENUM('reserved','on loan','available','maintenance');
+
+-- bookinstance table
+CREATE TABLE bookinstance(
+    instance_id uuid DEFAULT uuid_generate_v4() PRIMARY KEY ,
+    due_back date,
+    book uuid NOT NULL ,
+    borrower uuid NOT NULL,
+    loan_status bookstatus DEFAULT 'available',
+    FOREIGN KEY (book) REFERENCES book(book_id),
+    FOREIGN KEY (borrower) REFERENCES  person(user_id)
+);
+
+-- bookauthor table
+CREATE TABLE bookauthor(
+    book uuid NOT NULL ,
+    author uuid NOT NULL ,
+    PRIMARY KEY (book,author),
+    FOREIGN KEY (book) REFERENCES book(book_id),
+    FOREIGN KEY (author) REFERENCES author(author_id)
+);
+
+-- create an ENUM type for the borrowing status
+
+CREATE TYPE borrowstatus as ENUM ('pending','rejected','approved');
+
+-- borrowrequest
+
+CREATE TABLE borrorequest(
+    request_id uuid DEFAULT uuid_generate_v4() PRIMARY KEY ,
+    book_instance uuid NOT NULL ,
+    requester uuid NOT NULL ,
+    date_of_request date NOT NULL ,
+    status borrowstatus DEFAULT 'pending' NOT NULL ,
+    date_of_action date NOT NULL ,
+    return_date date NOT NULL CHECK ( return_date > date_of_request or return_date = date_of_request ),
+    approver uuid,
+    FOREIGN KEY (book_instance) REFERENCES bookinstance(instance_id),
+    FOREIGN KEY (requester) REFERENCES person(user_id),
+    FOREIGN KEY (approver) REFERENCES person(user_id)
+)
