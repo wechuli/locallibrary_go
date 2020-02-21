@@ -1,6 +1,6 @@
 -- scripts to create the database tables
 
--- create the table
+-- create the database
 CREATE DATABASE locallilbrary;
 
 
